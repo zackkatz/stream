@@ -3,10 +3,16 @@
 class WP_Stream_Connectors {
 
 	/**
-	 * Contexts registered
+	 * Connectors registered
 	 * @var array
 	 */
 	public static $connectors = array();
+
+	/**
+	 * Connectors enabled for operation
+	 * @var array
+	 */
+	public static $enabled_connectors = array();
 
 	/**
 	 * Action taxonomy terms
@@ -118,6 +124,8 @@ class WP_Stream_Connectors {
 				$connector::register();
 			}
 
+			self::$enabled_connectors[] = $connector;
+
 			// Add new terms to our label lookup array
 			self::$term_labels['stream_action']  = array_merge(
 				self::$term_labels['stream_action'],
@@ -129,12 +137,14 @@ class WP_Stream_Connectors {
 			);
 		}
 
+		add_action( 'init', array( __CLASS__, 'refresh_labels_cache' ), 11 );
+
 		/**
 		 * This allow to perform action after all connectors registration
 		 *
 		 * @param array all register connectors labels array
 		 */
-		do_action( 'wp_stream_after_connectors_registration', self::$term_labels['stream_connector'] );
+		do_action( 'wp_stream_after_connectors_registration', self::$term_labels['stream_connector'], self::$enabled_connectors );
 	}
 
 
@@ -244,5 +254,21 @@ class WP_Stream_Connectors {
 		$bool            = ( ! in_array( $value, $excluded_values ) );
 
 		return $bool;
+	}
+
+	/**
+	 * Run late after init, this refreshes contexts of each connector
+	 * To remedy the issue about some plugins registering their post types,
+	 * and taxonomies after our init sequence
+	 *
+	 * @action init => 10
+	 */
+	public static function refresh_labels_cache() {
+		foreach ( self::$enabled_connectors as $connector ) {
+			self::$term_labels['stream_context'] = array_merge(
+				self::$term_labels['stream_context'],
+				$connector::get_context_labels()
+			);
+		}
 	}
 }
