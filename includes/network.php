@@ -55,9 +55,27 @@ class WP_Stream_Network {
 	}
 
 	/**
+	 * Returns true if Stream is network activated, otherwise false
+	 *
+	 * @return bool
+	 */
+	public static function is_network_activated() {
+		if ( ! function_exists( 'is_plugin_active_for_network' ) ) {
+			require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
+		}
+
+		return is_plugin_active_for_network( WP_STREAM_PLUGIN );
+	}
+
+	/**
 	 * Adds Stream to the admin bar under the "My Sites > Network Admin" menu
+	 * if Stream has been network-activated
 	 */
 	function network_admin_bar_menu( $admin_bar ) {
+		if ( ! self::is_network_activated() ) {
+			return;
+		}
+
 		$href = add_query_arg(
 			array(
 				'page' => WP_Stream_Admin::RECORDS_PAGE_SLUG,
@@ -77,12 +95,13 @@ class WP_Stream_Network {
 
 	/**
 	 * Builds a stdClass object used when displaying actions done in network administration
+	 *
 	 * @return stdClass
 	 */
 	public static function get_network_blog() {
 		$blog           = new stdClass;
 		$blog->blog_id  = 0;
-		$blog->blogname = __( 'Network Admin', 'stream' );
+		$blog->blogname = __( 'Network Admin', 'default' );
 
 		return $blog;
 	}
@@ -95,10 +114,7 @@ class WP_Stream_Network {
 	 * @return boolean
 	 */
 	public static function disable_admin_access( $disable_access ) {
-		if ( ! function_exists( 'is_plugin_active_for_network' ) ) {
-			require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
-		}
-		if ( ! is_network_admin() && is_plugin_active_for_network( WP_STREAM_PLUGIN ) ) {
+		if ( ! is_network_admin() && self::is_network_activated() ) {
 			$settings = (array) get_site_option( WP_Stream_Settings::NETWORK_KEY, array() );
 
 			if ( isset( $settings['general_enable_site_access'] ) && false === $settings['general_enable_site_access'] ) {
@@ -126,7 +142,7 @@ class WP_Stream_Network {
 		WP_Stream_Admin::$screen_id['network_settings'] = add_submenu_page(
 			WP_Stream_Admin::RECORDS_PAGE_SLUG,
 			__( 'Stream Network Settings', 'stream' ),
-			__( 'Network Settings', 'stream' ),
+			__( 'Network Settings', 'default' ),
 			WP_Stream_Admin::SETTINGS_CAP,
 			self::NETWORK_SETTINGS_PAGE_SLUG,
 			array( 'WP_Stream_Admin', 'render_page' )
@@ -135,14 +151,14 @@ class WP_Stream_Network {
 		if ( ! WP_Stream_Admin::$disable_access ) {
 			WP_Stream_Admin::$screen_id['default_settings'] = add_submenu_page(
 				WP_Stream_Admin::RECORDS_PAGE_SLUG,
-				__( 'New Site Settings', 'stream' ),
+				__( 'New Site Settings', 'default' ),
 				__( 'Site Defaults', 'stream' ),
 				WP_Stream_Admin::SETTINGS_CAP,
 				self::DEFAULT_SETTINGS_PAGE_SLUG,
 				array( 'WP_Stream_Admin', 'render_page' )
 			);
 		}
-		if ( is_plugin_active_for_network( WP_STREAM_PLUGIN ) ) {
+		if ( self::is_network_activated() ) {
 			WP_Stream_Admin::$screen_id['extensions'] = add_submenu_page(
 				WP_Stream_Admin::RECORDS_PAGE_SLUG,
 				__( 'Stream Extensions', 'stream' ),
@@ -228,11 +244,7 @@ class WP_Stream_Network {
 	 * @return mixed
 	 */
 	function get_network_admin_fields( $fields ) {
-		if ( ! function_exists( 'is_plugin_active_for_network' ) ) {
-			require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
-		}
-
-		if ( ! is_plugin_active_for_network( WP_STREAM_PLUGIN ) ) {
+		if ( ! self::is_network_activated() ) {
 			return $fields;
 		}
 
@@ -254,7 +266,8 @@ class WP_Stream_Network {
 					'private_feeds',
 				),
 				'exclude' => array(
-					'authors_and_roles',
+					'authors',
+					'roles',
 					'connectors',
 					'contexts',
 					'actions',
@@ -287,7 +300,7 @@ class WP_Stream_Network {
 			$new_fields['general']['fields'][] = array(
 				'name'        => 'enable_site_access',
 				'title'       => __( 'Enable Site Access', 'stream' ),
-				'after_field' => __( 'Enabled' ),
+				'after_field' => __( 'Enabled', 'stream' ),
 				'default'     => 1,
 				'desc'        => __( 'When site access is disabled Stream can only be accessed from the network administration.', 'stream' ),
 				'type'        => 'checkbox',
@@ -392,7 +405,7 @@ class WP_Stream_Network {
 		}
 
 		if ( ! count( get_settings_errors() ) ) {
-			add_settings_error( 'general', 'settings_updated', __( 'Settings saved.', 'stream' ), 'updated' );
+			add_settings_error( 'general', 'settings_updated', __( 'Settings saved.', 'default' ), 'updated' );
 		}
 
 		set_transient( 'settings_errors', get_settings_errors(), 30 );
@@ -537,6 +550,7 @@ class WP_Stream_Network {
 		if ( ! is_network_admin() ) {
 			return array_diff( $connectors, array( 'WP_Stream_Connector_Blogs' ) );
 		}
+
 		return $connectors;
 	}
 }

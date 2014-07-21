@@ -3,29 +3,37 @@
 class WP_Stream_Connector_Posts extends WP_Stream_Connector {
 
 	/**
-	 * Context name
+	 * Connector slug
 	 *
 	 * @var string
 	 */
 	public static $name = 'posts';
 
 	/**
-	 * Actions registered for this context
+	 * Actions registered for this connector
 	 *
 	 * @var array
 	 */
 	public static $actions = array(
 		'transition_post_status',
+		'save_post',
 		'deleted_post',
 	);
 
 	/**
-	 * Return translated context label
+	 * Holds the post transition data to be called in callback_save_post
 	 *
-	 * @return string Translated context label
+	 * @var array
+	 */
+	protected static $transition_post_status = array();
+
+	/**
+	 * Return translated connector label
+	 *
+	 * @return string Translated connector label
 	 */
 	public static function get_label() {
-		return __( 'Posts', 'stream' );
+		return __( 'Posts', 'default' );
 	}
 
 	/**
@@ -35,10 +43,11 @@ class WP_Stream_Connector_Posts extends WP_Stream_Connector {
 	 */
 	public static function get_action_labels() {
 		return array(
-			'updated' => __( 'Updated', 'stream' ),
-			'created' => __( 'Created', 'stream' ),
-			'trashed' => __( 'Trashed', 'stream' ),
-			'deleted' => __( 'Deleted', 'stream' ),
+			'updated'   => __( 'Updated', 'stream' ),
+			'created'   => __( 'Created', 'stream' ),
+			'trashed'   => __( 'Trashed', 'stream' ),
+			'untrashed' => __( 'Restored', 'stream' ),
+			'deleted'   => __( 'Deleted', 'stream' ),
 		);
 	}
 
@@ -49,8 +58,12 @@ class WP_Stream_Connector_Posts extends WP_Stream_Connector {
 	 */
 	public static function get_context_labels() {
 		global $wp_post_types;
+
 		$post_types = wp_filter_object_list( $wp_post_types, array(), null, 'label' );
 		$post_types = array_diff_key( $post_types, array_flip( self::get_ignored_post_types() ) );
+
+		add_action( 'registered_post_type', array( __CLASS__, '_registered_post_type' ), 10, 2 );
+
 		return $post_types;
 	}
 
@@ -63,22 +76,65 @@ class WP_Stream_Connector_Posts extends WP_Stream_Connector {
 	 * @return array             Action links
 	 */
 	public static function action_links( $links, $record ) {
-		if ( get_post( $record->object_id ) ) {
-			if ( $link = get_edit_post_link( $record->object_id ) ) {
-				$post_type_name = self::get_post_type_name( get_post_type( $record->object_id ) );
-				$links[ sprintf( _x( 'Edit %s', 'Post type singular name', 'stream' ), $post_type_name ) ] = $link;
-			}
-			if ( post_type_exists( get_post_type( $record->object_id ) ) && $link = get_permalink( $record->object_id ) ) {
-				$links[ __( 'View', 'stream' ) ] = $link;
-			}
-			if ( 'updated' == $record->action ) {
+		$post = get_post( $record->object_id );
+
+		if ( $post && $post->post_status === wp_stream_get_meta( $record->ID, 'new_status', true ) ) {
+			$post_type_name = self::get_post_type_name( get_post_type( $post->ID ) );
+
+			if ( 'trash' === $post->post_status ) {
+				$untrash = wp_nonce_url(
+					add_query_arg(
+						array(
+							'action' => 'untrash',
+							'post'   => $post->ID,
+						),
+						admin_url( 'post.php' )
+					),
+					sprintf( 'untrash-post_%d', $post->ID )
+				);
+
+				$delete = wp_nonce_url(
+					add_query_arg(
+						array(
+							'action' => 'delete',
+							'post'   => $post->ID,
+						),
+						admin_url( 'post.php' )
+					),
+					sprintf( 'delete-post_%d', $post->ID )
+				);
+
+				$links[ sprintf( esc_html_x( 'Restore %s', 'Post type singular name', 'stream' ), $post_type_name ) ] = $untrash;
+				$links[ sprintf( esc_html_x( 'Delete %s Permenantly', 'Post type singular name', 'stream' ), $post_type_name ) ] = $delete;
+			} else {
+				$links[ sprintf( esc_html_x( 'Edit %s', 'Post type singular name', 'stream' ), $post_type_name ) ] = get_edit_post_link( $post->ID );
+
+				if ( $view_link = get_permalink( $post->ID ) ) {
+					$links[ esc_html__( 'View', 'default' ) ] = $view_link;
+				}
+
 				if ( $revision_id = wp_stream_get_meta( $record->ID, 'revision_id', true ) ) {
-					$links[ __( 'Revision', 'stream' ) ] = get_edit_post_link( $revision_id );
+					$links[ esc_html__( 'Revision', 'default' ) ] = get_edit_post_link( $revision_id );
 				}
 			}
 		}
 
 		return $links;
+	}
+
+	/**
+	 * Catch registeration of post_types after initial loading, to cache its labels
+	 *
+	 * @action registered_post_type
+	 *
+	 * @param string $post_type Post type slug
+	 * @param array  $args      Arguments used to register the post type
+	 */
+	public static function _registered_post_type( $post_type, $args ) {
+		$post_type_obj = get_post_type_object( $post_type );
+		$label         = $post_type_obj->label;
+
+		WP_Stream_Connectors::$term_labels['stream_context'][ $post_type ] = $label;
 	}
 
 	/**
@@ -93,41 +149,48 @@ class WP_Stream_Connector_Posts extends WP_Stream_Connector {
 
 		if ( in_array( $new, array( 'auto-draft', 'inherit' ) ) ) {
 			return;
-		} elseif ( $old == 'auto-draft' && $new == 'draft' ) {
-			$message = _x(
+		} elseif ( 'auto-draft' === $old && 'draft' === $new ) {
+			$summary = _x(
 				'"%1$s" %2$s drafted',
 				'1: Post title, 2: Post type singular name',
 				'stream'
 			);
 			$action  = 'created';
-		} elseif ( $old == 'auto-draft' && ( in_array( $new, array( 'publish', 'private' ) ) ) ) {
-			$message = _x(
+		} elseif ( 'auto-draft' === $old && ( in_array( $new, array( 'publish', 'private' ) ) ) ) {
+			$summary = _x(
 				'"%1$s" %2$s published',
 				'1: Post title, 2: Post type singular name',
 				'stream'
 			);
 			$action  = 'created';
-		} elseif ( $old == 'draft' && ( in_array( $new, array( 'publish', 'private' ) ) ) ) {
-			$message = _x(
+		} elseif ( 'draft' === $old && ( in_array( $new, array( 'publish', 'private' ) ) ) ) {
+			$summary = _x(
 				'"%1$s" %2$s published',
 				'1: Post title, 2: Post type singular name',
 				'stream'
 			);
-		} elseif ( $old == 'publish' && ( in_array( $new, array( 'draft' ) ) ) ) {
-			$message = _x(
+		} elseif ( 'publish' === $old && ( in_array( $new, array( 'draft' ) ) ) ) {
+			$summary = _x(
 				'"%1$s" %2$s unpublished',
 				'1: Post title, 2: Post type singular name',
 				'stream'
 			);
-		} elseif ( $new == 'trash' ) {
-			$message = _x(
+		} elseif ( 'trash' === $new ) {
+			$summary = _x(
 				'"%1$s" %2$s trashed',
 				'1: Post title, 2: Post type singular name',
 				'stream'
 			);
 			$action  = 'trashed';
+		} elseif ( 'trash' === $old && 'trash' !== $new ) {
+			$summary = _x(
+				'"%1$s" %2$s restored from trash',
+				'1: Post title, 2: Post type singular name',
+				'stream'
+			);
+			$action  = 'untrashed';
 		} else {
-			$message = _x(
+			$summary = _x(
 				'"%1$s" %2$s updated',
 				'1: Post title, 2: Post type singular name',
 				'stream'
@@ -136,6 +199,32 @@ class WP_Stream_Connector_Posts extends WP_Stream_Connector {
 
 		if ( empty( $action ) ) {
 			$action = 'updated';
+		}
+
+		// Hold the post transition data for use in callback_save_post
+		self::$transition_post_status = array(
+			'new_status' => $new,
+			'old_status' => $old,
+			'summary'    => $summary,
+			'action'     => $action,
+		);
+	}
+
+	/**
+	 * Log all post saves
+	 *
+	 * We don't log a record until after the post is saved in order to
+	 * properly capture the post revision ID (if one exists).
+	 *
+	 * New post status, old post status, summary and action pulled from
+	 * the $transition_post_status property which is defined in during
+	 * the transition_post_status action which happens before save_post.
+	 *
+	 * @action save_post
+	 */
+	public static function callback_save_post( $post_ID, $post, $update ) {
+		if ( in_array( $post->post_type, self::get_ignored_post_types() ) ) {
+			return;
 		}
 
 		$revision_id = null;
@@ -147,28 +236,30 @@ class WP_Stream_Connector_Posts extends WP_Stream_Connector {
 					'post_status'    => 'inherit',
 					'post_parent'    => $post->ID,
 					'posts_per_page' => 1,
-					'order'          => 'desc',
-					'fields'         => 'ids',
+					'order'          => 'DESC',
+					'orderby'        => 'post_date',
 				)
 			);
+
 			if ( $revision ) {
-				$revision_id = $revision[0];
+				$revision    = array_values( $revision );
+				$revision_id = $revision[0]->ID;
 			}
 		}
 
 		$post_type_name = strtolower( self::get_post_type_name( $post->post_type ) );
 
 		self::log(
-			$message,
+			self::$transition_post_status['summary'],
 			array(
 				'post_title'    => $post->post_title,
 				'singular_name' => $post_type_name,
-				'new_status'    => $new,
-				'old_status'    => $old,
+				'new_status'    => self::$transition_post_status['new_status'],
+				'old_status'    => self::$transition_post_status['old_status'],
 				'revision_id'   => $revision_id,
 			),
 			$post->ID,
-			array( $post->post_type => $action )
+			array( $post->post_type => self::$transition_post_status['action'] )
 		);
 	}
 
@@ -230,7 +321,7 @@ class WP_Stream_Connector_Posts extends WP_Stream_Connector {
 	 * @return  string  Post type label
 	 */
 	private static function get_post_type_name( $post_type_slug ) {
-		$name = __( 'Post', 'stream' ); // Default
+		$name = __( 'Post', 'default' ); // Default
 
 		if ( post_type_exists( $post_type_slug ) ) {
 			$post_type = get_post_type_object( $post_type_slug );

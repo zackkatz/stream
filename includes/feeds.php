@@ -80,6 +80,7 @@ class WP_Stream_Feeds {
 	 *
 	 * @action show_user_profile
 	 * @action edit_user_profile
+	 * @param WP_User $user
 	 * @return void
 	 */
 	public static function save_user_feed_key( $user ) {
@@ -104,6 +105,7 @@ class WP_Stream_Feeds {
 	 *
 	 * @action show_user_profile
 	 * @action edit_user_profile
+	 * @param WP_User $user
 	 * @return string
 	 */
 	public static function user_feed_key( $user ) {
@@ -132,9 +134,9 @@ class WP_Stream_Feeds {
 					</p>
 					<p class="description"><?php esc_html_e( 'This is your private key used for accessing feeds of Stream Records securely. You can change your key at any time by generating a new one using the link above.', 'stream' ) ?></p>
 					<p class="wp-stream-feeds-links">
-						<a href="<?php echo esc_url( add_query_arg( array( 'type' => 'xml' ), $link )  ) ?>" class="rss-feed" target="_blank"><?php echo esc_html_e( 'RSS Feed' ) ?></a>
+						<a href="<?php echo esc_url( add_query_arg( array( 'type' => 'xml' ), $link )  ) ?>" class="rss-feed" target="_blank"><?php echo esc_html_e( 'RSS Feed', 'stream' ) ?></a>
 						|
-						<a href="<?php echo esc_url( add_query_arg( array( 'type' => 'json' ), $link ) ) ?>" class="json-feed" target="_blank"><?php echo esc_html_e( 'JSON Feed' ) ?></a>
+						<a href="<?php echo esc_url( add_query_arg( array( 'type' => 'json' ), $link ) ) ?>" class="json-feed" target="_blank"><?php echo esc_html_e( 'JSON Feed', 'stream' ) ?></a>
 					</p>
 				</td>
 			</tr>

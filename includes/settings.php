@@ -49,7 +49,6 @@ class WP_Stream_Settings {
 	 * @return \WP_Stream_Settings
 	 */
 	public static function load() {
-
 		self::$option_key = self::get_option_key();
 		self::$options    = self::get_options();
 
@@ -69,7 +68,6 @@ class WP_Stream_Settings {
 
 		// Ajax callback function to search IPs
 		add_action( 'wp_ajax_stream_get_ips', array( __CLASS__, 'get_ips' ) );
-
 	}
 
 	/**
@@ -107,6 +105,7 @@ class WP_Stream_Settings {
 					'user_url',
 				),
 				'orderby' => 'display_name',
+				'number'  => WP_Stream_Admin::PRELOAD_AUTHORS_MAX,
 			)
 		);
 
@@ -126,8 +125,8 @@ class WP_Stream_Settings {
 			$author = new WP_Stream_Author( $user->ID );
 
 			$args = array(
-				'id'     => $author->ID,
-				'text'   => $author->display_name,
+				'id'   => $author->ID,
+				'text' => $author->display_name,
 			);
 
 			$args['tooltip'] = esc_attr(
@@ -193,16 +192,15 @@ class WP_Stream_Settings {
 	/**
 	 * Filter the columns to search in a WP_User_Query search.
 	 *
-	 *
 	 * @param array  $search_columns Array of column names to be searched.
 	 * @param string $search         Text being searched.
 	 * @param WP_User_Query $query	 current WP_User_Query instance.
-	 *
 	 *
 	 * @return array
 	 */
 	public static function add_display_name_search_columns( $search_columns, $search, $query ){
 		$search_columns[] = 'display_name';
+
 		return $search_columns;
 	}
 
@@ -215,6 +213,7 @@ class WP_Stream_Settings {
 		$option_key = self::KEY;
 
 		$current_page = wp_stream_filter_input( INPUT_GET, 'page' );
+
 		if ( ! $current_page ) {
 			$current_page = wp_stream_filter_input( INPUT_GET, 'action' );
 		}
@@ -239,7 +238,7 @@ class WP_Stream_Settings {
 		if ( empty( self::$fields ) ) {
 			$fields = array(
 				'general' => array(
-					'title'  => esc_html__( 'General', 'stream' ),
+					'title'  => esc_html__( 'General', 'default' ),
 					'fields' => array(
 						array(
 							'name'        => 'role_access',
@@ -301,7 +300,7 @@ class WP_Stream_Settings {
 					'fields' => array(
 						array(
 							'name'        => 'authors_and_roles',
-							'title'       => esc_html__( 'Authors & Roles', 'stream' ),
+							'title'       => __( 'Authors &amp; Roles', 'stream' ),
 							'type'        => 'select2_user_role',
 							'desc'        => esc_html__( 'No activity will be logged for these authors and/or roles.', 'stream' ),
 							'choices'     => self::get_roles(),
@@ -427,7 +426,6 @@ class WP_Stream_Settings {
 				$defaults
 			)
 		);
-
 	}
 
 	/**
@@ -436,7 +434,6 @@ class WP_Stream_Settings {
 	 * @return void
 	 */
 	public static function register_settings() {
-
 		$sections = self::get_fields();
 
 		register_setting( self::$option_key, self::$option_key );
@@ -483,6 +480,7 @@ class WP_Stream_Settings {
 		if ( is_array( $new_value ) && is_array( $old_value ) ) {
 			$new_value = ( array_key_exists( 'general_private_feeds', $new_value ) ) ? $new_value['general_private_feeds'] : 0;
 			$old_value = ( array_key_exists( 'general_private_feeds', $old_value ) ) ? $old_value['general_private_feeds'] : 0;
+
 			if ( $new_value !== $old_value ) {
 				delete_option( 'rewrite_rules' );
 			}
@@ -496,8 +494,7 @@ class WP_Stream_Settings {
 	 * @return string         HTML to be displayed
 	 */
 	public static function render_field( $field ) {
-		$output = null;
-
+		$output        = null;
 		$type          = isset( $field['type'] ) ? $field['type'] : null;
 		$section       = isset( $field['section'] ) ? $field['section'] : null;
 		$name          = isset( $field['name'] ) ? $field['name'] : null;
@@ -777,11 +774,13 @@ class WP_Stream_Settings {
 	 */
 	public static function output_field( $field ) {
 		$method = 'output_' . $field['name'];
+
 		if ( method_exists( __CLASS__, $method ) ) {
 			return call_user_func( array( __CLASS__, $method ), $field );
 		}
 
 		$output = self::render_field( $field );
+
 		echo $output; // xss okay
 	}
 
@@ -827,6 +826,7 @@ class WP_Stream_Settings {
 	 */
 	public static function get_terms_labels( $column ) {
 		$return_labels = array();
+
 		if ( isset ( WP_Stream_Connectors::$term_labels[ 'stream_' . $column ] ) ) {
 			$return_labels = WP_Stream_Connectors::$term_labels[ 'stream_' . $column ];
 			ksort( $return_labels );
@@ -848,17 +848,36 @@ class WP_Stream_Settings {
 	}
 
 	/**
-	 * @param $column string name of the setting key (actions|ip_addresses|contexts|connectors)
+	 * @param $column string name of the setting key (authors|roles|actions|ip_addresses|contexts|connectors)
 	 *
 	 * @return array
 	 */
 	public static function get_excluded_by_key( $column ) {
-		$option_name     = 'exclude_' . $column;
+		$option_name = ( 'authors' === $column || 'roles' === $column ) ? 'exclude_authors_and_roles' : 'exclude_' . $column;
+
 		$excluded_values = ( isset( self::$options[ $option_name ] ) ) ? self::$options[ $option_name ] : array();
+
 		if ( is_callable( $excluded_values ) ) {
 			$excluded_values = call_user_func( $excluded_values );
 		}
+
 		$excluded_values = wp_list_filter( $excluded_values, array( '__placeholder__' ), 'NOT' );
+
+		if ( 'exclude_authors_and_roles' === $option_name ) {
+			// Convert numeric strings to integers
+			array_walk( $excluded_values,
+				function ( &$value ) {
+					if ( is_numeric( $value ) ) {
+						$value = absint( $value );
+					}
+				}
+			);
+
+			$filter = ( 'roles' === $column ) ? 'is_string' : 'is_int'; // Author roles are always strings and author ID's are always integers
+
+			$excluded_values = array_values( array_filter( $excluded_values, $filter ) ); // Reset the array keys
+		}
+
 		return $excluded_values;
 	}
 

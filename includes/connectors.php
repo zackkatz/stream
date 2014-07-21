@@ -35,17 +35,24 @@ class WP_Stream_Connectors {
 
 		require_once WP_STREAM_INC_DIR . 'connector.php';
 
-		$found = wp_cache_get( 'connectors_glob', 'wp_stream' );
-		if ( empty( $found ) ) {
-			$found = glob( WP_STREAM_DIR . 'connectors/*.php' );
-			wp_cache_set( 'connectors_glob', $found, 'wp_stream' );
-		}
+		$connectors = array(
+			'blogs',
+			'comments',
+			'editor',
+			'installer',
+			'media',
+			'menus',
+			'posts',
+			'settings',
+			'taxonomies',
+			'users',
+			'widgets',
+		);
 		$classes = array();
-		foreach ( $found as $class ) {
-			include_once $class;
-			$class_name = ucwords( preg_match( '#(.+)\.php#', basename( $class ), $matches ) ? $matches[1] : '' );
-			$class      = "WP_Stream_Connector_$class_name";
-			$classes[]  = $class;
+		foreach ( $connectors as $connector ) {
+			include_once WP_STREAM_DIR . '/connectors/' . $connector .'.php';
+			$class     = "WP_Stream_Connector_$connector";
+			$classes[] = $class;
 		}
 
 		$exclude_all_connector = false;
@@ -160,18 +167,24 @@ class WP_Stream_Connectors {
 			$user = wp_get_current_user();
 		}
 
-		// If the user is not a valid user then we log action
+		$bool             = true;
+		$user_roles       = array_values( $user->roles );
+		$excluded_authors = WP_Stream_Settings::get_excluded_by_key( 'authors' );
+		$excluded_roles   = WP_Stream_Settings::get_excluded_by_key( 'roles' );
+
+		// Don't log excluded users
+		if ( in_array( $user->ID, $excluded_authors ) ) {
+			$bool = false;
+		}
+
+		// Don't log excluded user roles
+		if ( 0 !== count( array_intersect( $user_roles, $excluded_roles ) ) ) {
+			$bool = false;
+		}
+
+		// If the user is not a valid user then we always log the action
 		if ( ! ( $user instanceof WP_User ) || 0 === $user->ID ) {
 			$bool = true;
-		} else {
-			// If a user is part of a role that we don't want to log, we disable it
-			$user_roles   = array_values( $user->roles );
-			$roles_logged = WP_Stream_Settings::get_excluded_by_key( 'authors_and_roles' );
-			$bool         = ( 0 === count( array_intersect( $user_roles, $roles_logged ) ) );
-			//Check user id in exclude array
-			if ( $bool ) {
-				$bool = ! ( in_array( $user->ID, $roles_logged ) );
-			}
 		}
 
 		/**

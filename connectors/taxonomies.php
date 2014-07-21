@@ -3,7 +3,7 @@
 class WP_Stream_Connector_Taxonomies extends WP_Stream_Connector {
 
 	/**
-	 * Context name
+	 * Connector slug
 	 *
 	 * @var string
 	 */
@@ -19,7 +19,7 @@ class WP_Stream_Connector_Taxonomies extends WP_Stream_Connector {
 	);
 
 	/**
-	 * Actions registered for this context
+	 * Actions registered for this connector
 	 *
 	 * @var array
 	 */
@@ -45,16 +45,9 @@ class WP_Stream_Connector_Taxonomies extends WP_Stream_Connector {
 	public static $context_labels;
 
 	/**
-	 * Cached taxonomy singular labels, to be used in summaries
+	 * Return translated connector label
 	 *
-	 * @var array
-	 */
-	public static $singular_labels;
-
-	/**
-	 * Return translated context label
-	 *
-	 * @return string Translated context label
+	 * @return string Translated connector label
 	 */
 	public static function get_label() {
 		return __( 'Taxonomies', 'stream' );
@@ -84,7 +77,8 @@ class WP_Stream_Connector_Taxonomies extends WP_Stream_Connector {
 		$labels = wp_list_pluck( $wp_taxonomies, 'labels' );
 
 		self::$context_labels  = wp_list_pluck( $labels, 'name' );
-		self::$singular_labels = array_map( 'strtolower', wp_list_pluck( $labels, 'singular_name' ) );
+
+		add_action( 'registered_taxonomy', array( __CLASS__, '_registered_taxonomy' ), 10, 3 );
 
 		return self::$context_labels;
 	}
@@ -112,6 +106,24 @@ class WP_Stream_Connector_Taxonomies extends WP_Stream_Connector {
 	}
 
 	/**
+	 * Catch registration of taxonomies after inital loading, so we can cache its labels
+	 *
+	 * @action registered_taxonomy
+	 *
+	 * @param string       $taxonomy    Taxonomy slug
+	 * @param array|string $object_type Object type or array of object types
+	 * @param array|string $args        Array or string of taxonomy registration arguments
+	 */
+	public static function _registered_taxonomy( $taxonomy, $object_type, $args ) {
+		$taxonomy_obj = get_taxonomy( $taxonomy );
+		$label        = get_taxonomy_labels( $taxonomy_obj )->name;
+
+		self::$context_labels[ $taxonomy ] = $label;
+
+		WP_Stream_Connectors::$term_labels['stream_context'][ $taxonomy ] = $label;
+	}
+
+	/**
 	 * Tracks creation of terms
 	 *
 	 * @action created_term
@@ -123,7 +135,7 @@ class WP_Stream_Connector_Taxonomies extends WP_Stream_Connector {
 
 		$term           = get_term( $term_id, $taxonomy );
 		$term_name      = $term->name;
-		$taxonomy_label = self::$singular_labels[ $taxonomy ];
+		$taxonomy_label = strtolower( self::$context_labels[ $taxonomy ] );
 		$term_parent    = $term->parent;
 
 		self::log(
@@ -150,7 +162,7 @@ class WP_Stream_Connector_Taxonomies extends WP_Stream_Connector {
 
 		$term_name      = $deleted_term->name;
 		$term_parent    = $deleted_term->parent;
-		$taxonomy_label = self::$singular_labels[ $taxonomy ];
+		$taxonomy_label = strtolower( self::$context_labels[ $taxonomy ] );
 
 		self::log(
 			_x(
@@ -185,7 +197,7 @@ class WP_Stream_Connector_Taxonomies extends WP_Stream_Connector {
 		}
 
 		$term_name      = $term->name;
-		$taxonomy_label = self::$singular_labels[ $taxonomy ];
+		$taxonomy_label = strtolower( self::$context_labels[ $taxonomy ] );
 		$term_parent    = $term->parent;
 
 		self::log(
