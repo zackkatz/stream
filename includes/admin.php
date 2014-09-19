@@ -164,6 +164,7 @@ class WP_Stream_Admin {
 		wp_register_script( 'select2', WP_STREAM_URL . 'ui/select2/select2.min.js', array( 'jquery' ), '3.4.5', true );
 		wp_register_style( 'select2', WP_STREAM_URL . 'ui/select2/select2.css', array(), '3.4.5' );
 		wp_register_script( 'timeago', WP_STREAM_URL . 'ui/timeago/timeago.js', array(), '0.2.0', true );
+		wp_register_script( 'd3', WP_STREAM_URL . 'ui/d3.js', array(), '3.4.11', true );
 
 		$locale    = substr( get_locale(), 0, 2 );
 		$file_tmpl = 'ui/timeago/locale/jquery.timeago.%s.js';
@@ -181,6 +182,7 @@ class WP_Stream_Admin {
 		if ( 'index.php' === $hook ) {
 			wp_enqueue_script( 'wp-stream-dashboard', WP_STREAM_URL . 'ui/dashboard.js', array( 'jquery' ), WP_Stream::VERSION );
 			wp_enqueue_script( 'wp-stream-live-updates', WP_STREAM_URL . 'ui/live-updates.js', array( 'jquery', 'heartbeat' ), WP_Stream::VERSION );
+			wp_enqueue_script( 'd3' );
 		} elseif ( in_array( $hook, self::$screen_id ) || in_array( $hook, $script_screens ) ) {
 			wp_enqueue_script( 'select2' );
 			wp_enqueue_style( 'select2' );

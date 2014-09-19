@@ -304,3 +304,102 @@ class WP_Stream_Dashboard_Widget {
 	}
 
 }
+
+class WP_Stream_Goals_Widget {
+
+	public static function load() {
+		add_action( 'wp_dashboard_setup', array( __CLASS__, 'setup' ) );
+	}
+
+	public static function setup() {
+		if ( ! current_user_can( WP_Stream_Admin::VIEW_CAP ) ) {
+			return;
+		}
+
+		wp_add_dashboard_widget(
+			'dashboard_stream_goals',
+			is_network_admin() ? esc_html__( 'Stream Goals', 'stream' ) : esc_html__( 'Stream Goals', 'stream' ),
+			array( __CLASS__, 'display' ),
+			array( __CLASS__, 'options' )
+		);
+	}
+
+	public static function display() {
+
+		$options = get_option( 'dashboard_stream_goal_options', array() );
+
+		$options['create_goal']   = ( isset( $options['create_goal'] ) ) ? $options['create_goal'] : 10;
+		$options['discuss_goal']  = ( isset( $options['discuss_goal'] ) ) ? $options['discuss_goal'] : 10;
+		$options['optimize_goal'] = ( isset( $options['optimize_goal'] ) ) ? $options['optimize_goal'] : 10;
+
+		?>
+		<div id="dashboard-stream-goals">
+			<div class="dashboard-stream-goal goal-1">
+				<div class="graph" data-progress=".5"></div>
+				<div class="label">
+					<?php _e( 'Create', 'stream' ); ?>
+				</div>
+				<div  class="desc">
+					<a href="#"><?php _e( 'write a post,', 'stream' ); ?></a>
+					<a href="#"><?php _e( 'post a comment,', 'stream' ); ?></a>
+					<br/>
+					<a href="#"><?php _e( 'make a page', 'stream' ); ?></a>
+				</div>
+			</div>
+			<div class="dashboard-stream-goal goal-2">
+				<div class="graph" data-progress=".7"></div>
+				<span class="label">
+					<?php _e( 'Discuss', 'stream' ); ?>
+				</span>
+				<div  class="desc">
+					<a href="#"><?php _e( 'respond to comments,', 'stream' ); ?></a>
+					<a href="#"><?php _e( 'check pingbacks', 'stream' ); ?></a>
+				</div>
+			</div>
+			<div class="dashboard-stream-goal goal-3">
+				<div class="graph" data-progress=".3"></div>
+				<span class="label">
+					<?php _e( 'Optimize', 'stream' ); ?>
+				</span>
+				<div  class="desc">
+					<a href="#"><?php _e( 'install plugins,', 'stream' ); ?></a>
+					<a href="#"><?php _e( 'check for updates', 'stream' ); ?></a>
+				</div>
+			</div>
+		</div>
+		<?php
+	}
+
+	public static function options() {
+		$options = get_option( 'dashboard_stream_goal_options', array() );
+
+		if ( 'POST' === $_SERVER['REQUEST_METHOD'] && isset( $_POST['dashboard_stream_goal_options'] ) ) {
+			$options['create_goal']   = absint( $_POST['dashboard_stream_goal_options']['create_goal'] );
+			$options['discuss_goal']  = absint( $_POST['dashboard_stream_goal_options']['discuss_goal'] );
+			$options['optimize_goal'] = absint( $_POST['dashboard_stream_goal_options']['optimize_goal'] );
+			update_option( 'dashboard_stream_goal_options', $options );
+		}
+
+		$options['create_goal']   = ( isset( $options['create_goal'] ) ) ? $options['create_goal'] : 10;
+		$options['discuss_goal']  = ( isset( $options['discuss_goal'] ) ) ? $options['discuss_goal'] : 10;
+		$options['optimize_goal'] = ( isset( $options['optimize_goal'] ) ) ? $options['optimize_goal'] : 10;
+
+		?>
+		<div id="dashboard-stream-goals-options">
+			<p>
+				<input type="number" step="1" min="1" max="999" class="screen-per-page" name="dashboard_stream_goal_options[create_goal]" id="dashboard_stream_goal_options[create_goal]" value="<?php echo absint( $options['create_goal'] ) ?>">
+				<label for="dashboard_stream_goal_options[create_goal]"><?php esc_html_e( 'Create Goal', 'stream' ) ?></label>
+			</p>
+			<p>
+				<input type="number" step="1" min="1" max="999" class="screen-per-page" name="dashboard_stream_goal_options[discuss_goal]" id="dashboard_stream_goal_options[discuss_goal]" value="<?php echo absint( $options['discuss_goal'] ) ?>">
+				<label for="dashboard_stream_goal_options[discuss_goal]"><?php esc_html_e( 'Discuss Goal', 'stream' ) ?></label>
+			</p>
+			<p>
+				<input type="number" step="1" min="1" max="999" class="screen-per-page" name="dashboard_stream_goal_options[optimize_goal]" id="dashboard_stream_goal_options[optimize_goal]" value="<?php echo absint( $options['optimize_goal'] ) ?>">
+				<label for="dashboard_stream_goal_options[optimize_goal]"><?php esc_html_e( 'Optimize Goal', 'stream' ) ?></label>
+			</p>
+		</div>
+	<?php
+	}
+
+}

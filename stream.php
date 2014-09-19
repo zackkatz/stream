@@ -132,6 +132,7 @@ class WP_Stream {
 
 			require_once WP_STREAM_INC_DIR . 'dashboard.php';
 			add_action( 'plugins_loaded', array( 'WP_Stream_Dashboard_Widget', 'load' ) );
+			add_action( 'plugins_loaded', array( 'WP_Stream_Goals_Widget', 'load' ) );
 
 			require_once WP_STREAM_INC_DIR . 'live-update.php';
 			add_action( 'plugins_loaded', array( 'WP_Stream_Live_Update', 'load' ) );

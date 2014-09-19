@@ -110,4 +110,50 @@ jQuery(function( $ ) {
 
 	});
 
+	/**
+	 *	Stream Goals
+	 */
+	 $( document ).ready( function() {
+	 	var d3 = window.d3;
+
+	 	var	twoPi = 2 * Math.PI,
+	 	progress = 0,
+	 	formatPercent = d3.format(".0%");
+
+	 	var arc = d3.svg.arc()
+	 		.startAngle(0)
+	 		.innerRadius(22)
+	 		.outerRadius(50);
+
+	 	var svg = d3.selectAll(".dashboard-stream-goal .graph").append("svg")
+	 		.append("g");
+
+	 	var meter = svg.append("g")
+	 		.attr("class", "progress-meter");
+
+	 	meter.append("path")
+	 		.attr("class", "background")
+	 		.attr("d", arc.endAngle(twoPi));
+
+	 	var foreground = meter.append("path")
+	 		.attr("class", "foreground");
+
+	 	var text = meter.append("text")
+	 		.attr("text-anchor", "middle")
+	 		.attr("dy", ".35em");
+
+	 	d3.selectAll( ".dashboard-stream-goal .graph" ).each( function( d, i ) {
+	 		var element = this;
+
+	 		var value = d3.select(this).attr( 'data-progress');
+	 		d3.select(this).select('.foreground').attr("d", arc.endAngle(twoPi*value));
+	 		d3.select(this).select('text').text( formatPercent(value) );
+	 	});
+
+	 	
+
+
+	 });
+
+
 });

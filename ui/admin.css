@@ -428,3 +428,56 @@
 .stream_page_wp_stream_extensions > iframe {
 	display: none;
 }
+
+.dashboard-stream-goal {
+	height: 100px;
+	clear: both;
+}
+
+.dashboard-stream-goal .label {
+	position: relative;
+	top: 25px;
+	font-size: 24px;
+}
+
+.dashboard-stream-goal .desc {
+	position: relative;
+	top: 27px;
+	font-size: 16px;
+}
+
+.dashboard-stream-goal .graph {
+	float: left;
+	width: 100px;
+	height: 100px;
+	margin: 5px 5px 5px 0px;
+}
+
+.dashboard-stream-goal .graph text {
+	transform: translate( 52px, 50px);
+	font-size: 16px;
+	font-weight: bold;
+}
+
+.dashboard-stream-goal .graph .background{
+	opacity: .2;
+}
+
+.goal-1, .goal-1 a{
+	color: #0075A2;
+	fill: #0075A2;
+}
+
+.goal-2, .goal-2 a{
+	color: #D09400;
+	fill: #D09400;
+}
+
+.goal-3,.goal-3 a{
+	color: #d54e21;
+	fill: #d54e21;
+}
+
+.dashboard-stream-goal .graph path {
+	transform: translate( 50px, 50px);
+}
