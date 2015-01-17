@@ -234,6 +234,12 @@ class WP_Stream_Query {
 		if ( ! empty( $args['aggregations'] ) ) {
 			foreach ( $args['aggregations'] as $aggregation_term ) {
 				$query['aggregations'][ $aggregation_term ]['terms']['field'] = $aggregation_term;
+
+				// Whenever context aggregation is called also provide connector/context sub aggregation buckets
+				if ( 'context' === $aggregation_term ) {
+					$query['aggregations']['connector']['terms']['field'] = 'connector';
+					$query['aggregations']['connector']['aggregations']['context']['terms']['field'] = 'context';
+				}
 			}
 		}
 

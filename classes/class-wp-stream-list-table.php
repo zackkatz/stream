@@ -206,7 +206,7 @@ class WP_Stream_List_Table extends WP_List_Table {
 			$args['records_per_page'] = $this->get_items_per_page( 'edit_stream_per_page', 20 );
 		}
 
-		$args['aggregations'] = array( 'author', 'connector', 'context', 'action' );
+		$args['aggregations'] = array( 'author', 'context', 'action' );
 
 		$items = wp_stream_query( $args );
 
@@ -426,7 +426,7 @@ class WP_Stream_List_Table extends WP_List_Table {
 	}
 
 	/**
-	 * Assembles records for display in search filters
+	 * Assembles items for display in search filters
 	 *
 	 * Gathers list of all authors/connectors, then compares it to
 	 * results of existing records.  All items that do not exist in records
@@ -440,21 +440,20 @@ class WP_Stream_List_Table extends WP_List_Table {
 	 *
 	 * @return array   options to be displayed in search filters
 	 */
-	function assemble_records( $column ) {
-		$setting_key = self::get_column_excluded_setting_key( $column );
+	function assemble_items( $column ) {
+		$results    = array();
+		$query_meta = WP_Stream::$db->get_query_meta();
 
-		// @todo eliminate special condition for authors, especially using a WP_User object as the value; should use string or stringifiable object
 		if ( 'author' === $column ) {
-			$all_records = array();
-
-			// If the number of users exceeds the max authors constant value then return an empty array and use AJAX instead
 			$user_count  = count_users();
 			$total_users = $user_count['total_users'];
 
+			// If author count is too high return an empty array and use AJAX instead
 			if ( $total_users > WP_Stream_Admin::PRELOAD_AUTHORS_MAX ) {
 				return array();
 			}
 
+			// Get all authors
 			$authors = array_map(
 				function ( $user_id ) {
 					return new WP_Stream_Author( $user_id );
@@ -462,65 +461,66 @@ class WP_Stream_List_Table extends WP_List_Table {
 				get_users( array( 'fields' => 'ID' ) )
 			);
 
+			// Add WP-CLI pseudo user to the authors array
 			$authors[] = new WP_Stream_Author( 0, array( 'is_wp_cli' => true ) );
 
 			foreach ( $authors as $author ) {
-				$all_records[ $author->id ] = $author->get_display_name();
+				$keys  = array();
+				$count = 0;
+
+				if ( isset( $query_meta->aggregations->author->buckets ) ) {
+					$keys = wp_list_pluck( $query_meta->aggregations->author->buckets, 'key' );
+
+					foreach ( $query_meta->aggregations->author->buckets as $bucket ) {
+						if ( $bucket->key == $author->id ) {
+							$count = $bucket->doc_count;
+						}
+					}
+				}
+
+				$results[ $author->id ] = array(
+					'key'       => $author->id,
+					'title'     => __( 'authors', 'stream' ),
+					'label'     => $author->get_display_name(),
+					'role'      => $author->get_role(),
+					'icon'      => $author->get_avatar_src( 32 ),
+					'doc_count' => $count,
+				);
 			}
-		} else {
-			$prefixed_column = sprintf( 'stream_%s', $column );
-			$all_records     = WP_Stream_Connectors::$term_labels[ $prefixed_column ];
+
+			// Remove WP-CLI pseudo user from the results if no records exist
+			if ( isset( $results[0] ) && ! in_array( 0, $keys ) ) {
+				unset( $results[0] );
+			}
+		} elseif ( 'context' === $column ) {
+			// Use the connector/context sub aggregation buckets
+			foreach ( $query_meta->aggregations->connector->buckets as $connector ) {
+				$results[ $connector->key ]['key']       = $connector->key;
+				$results[ $connector->key ]['doc_count'] = $connector->doc_count;
+				$results[ $connector->key ]['title']     = __( 'contexts', 'stream' );
+				$results[ $connector->key ]['label']     = isset( WP_Stream_Connectors::$term_labels['stream_connector'][ $connector->key ] ) ? WP_Stream_Connectors::$term_labels['stream_connector'][ $connector->key ] : $connector->key;
+				$results[ $connector->key ]['context']   = array();
+
+				foreach ( $connector->context->buckets as $context ) {
+					$results[ $connector->key ]['context'][] = array(
+						'key'       => $context->key,
+						'doc_count' => $context->doc_count,
+						'label'     => isset( WP_Stream_Connectors::$term_labels['stream_context'][ $context->key ] ) ? WP_Stream_Connectors::$term_labels['stream_context'][ $context->key ] : $context->key,
+					);
+				}
+			}
+		} elseif ( 'action' === $column ) {
+			$actions = WP_Stream_Connectors::$term_labels;
+
+			foreach ( $query_meta->aggregations->action->buckets as $action ) {
+				$results[ $action->key ]['key']       = $action->key;
+				$results[ $action->key ]['doc_count'] = $action->doc_count;
+				$results[ $action->key ]['title']     = __( 'actions', 'stream' );
+				$results[ $action->key ]['label']     = isset( WP_Stream_Connectors::$term_labels['stream_action'][ $action->key ] ) ? WP_Stream_Connectors::$term_labels['stream_action'][ $action->key ] : $action->key;
+			}
 		}
 
-		$query_meta = WP_Stream::$db->get_query_meta();
-
-		$values           = array();
-		$existing_records = array();
-
-		if ( isset( $query_meta->aggregations->$column->buckets ) ) {
-			foreach ( $query_meta->aggregations->$column->buckets as $field ) {
-				$values[ $field->key ] = $field->key;
-			}
-
-			if ( ! empty( $values ) ) {
-				$existing_records = array_combine( $values, $values );
-			}
-		}
-
-		$active_records   = array();
-		$disabled_records = array();
-
-		foreach ( $all_records as $record => $label ) {
-			if ( array_key_exists( $record, $existing_records ) ) {
-				$active_records[ $record ] = array( 'label' => $label, 'disabled' => '' );
-			} else {
-				$disabled_records[ $record ] = array( 'label' => $label, 'disabled' => 'disabled="disabled"' );
-			}
-		}
-
-		// Remove WP-CLI pseudo user if no records with user=0 exist
-		if ( isset( $disabled_records[0] ) ) {
-			unset( $disabled_records[0] );
-		}
-
-		$sort = function ( $a, $b ) use ( $column ) {
-			$label_a = (string) $a['label'];
-			$label_b = (string) $b['label'];
-
-			if ( $label_a === $label_b ) {
-				return 0;
-			}
-
-			return ( strtolower( $label_a ) < strtolower( $label_b ) ) ? -1 : 1;
-		};
-
-		uasort( $active_records, $sort );
-		uasort( $disabled_records, $sort );
-
-		// Not using array_merge() in order to preserve the array index for the Authors dropdown which uses the user_id as the key
-		$all_records = $active_records + $disabled_records;
-
-		return $all_records;
+		return $results;
 	}
 
 	public function get_filters() {
@@ -533,24 +533,24 @@ class WP_Stream_List_Table extends WP_List_Table {
 			'items' => $date_interval->intervals,
 		);
 
-		$authors_records = WP_Stream_Admin::get_authors_record_meta(
-			$this->assemble_records( 'author' )
+		$authors_items = WP_Stream_Admin::get_authors_record_meta(
+			$this->assemble_items( 'author' )
 		);
 
 		$filters['author'] = array(
 			'title' => __( 'authors', 'stream' ),
-			'items' => $authors_records,
-			'ajax'  => count( $authors_records ) <= 0,
+			'items' => $this->assemble_items( 'author' ),
+			'ajax'  => count( $authors_items ) <= 0,
 		);
 
 		$filters['context'] = array(
 			'title' => __( 'contexts', 'stream' ),
-			'items' => $this->assemble_records( 'context' ),
+			'items' => $this->assemble_items( 'context' ),
 		);
 
 		$filters['action'] = array(
 			'title' => __( 'actions', 'stream' ),
-			'items' => $this->assemble_records( 'action' ),
+			'items' => $this->assemble_items( 'action' ),
 		);
 
 		/**
@@ -567,44 +567,43 @@ class WP_Stream_List_Table extends WP_List_Table {
 	}
 
 	function filters_form() {
-		$user_id = get_current_user_id();
 		$filters = $this->get_filters();
 
 		$filters_string  = sprintf( '<input type="hidden" name="page" value="%s" />', 'wp_stream' );
 		$filters_string .= sprintf( '<span class="filter_info hidden">%s</span>', esc_html__( 'Show filter controls via the screen options tab above.', 'stream' ) );
 
-		foreach ( $filters as $name => $data ) {
-			if ( 'date' === $name ) {
+		foreach ( $filters as $column => $data ) {
+			if ( 'date' === $column ) {
 				$filters_string .= $this->filter_date( $data['items'] );
 			} else {
-				if ( 'context' === $name ) {
-					// Add Connectors as parents, and apply the Contexts as children
-					$connectors = $this->assemble_records( 'connector' );
+				if ( 'context' === $column ) {
+					$context_items = array();
 
-					foreach ( $connectors as $connector => $item ) {
+					foreach ( $data['items'] as $connector => $item ) {
 						$context_items[ $connector ]['label'] = $item['label'];
 
-						foreach ( $data['items'] as $context_value => $context_item ) {
-							if ( isset( WP_Stream_Connectors::$contexts[ $connector ] ) && array_key_exists( $context_value, WP_Stream_Connectors::$contexts[ $connector ] ) ) {
-								$context_items[ $connector ]['children'][ $context_value ] = $context_item;
-							}
+						foreach ( $item['context'] as $context ) {
+							$context_items[ $connector ]['children'][ $context['key'] ] = array( 'label' => $context['label'] );
 						}
-					}
 
-					foreach ( $context_items as $context_value => $context_item ) {
-						if ( ! isset( $context_item['children'] ) || empty( $context_item['children'] ) ) {
-							unset( $context_items[ $context_value ] );
-						}
+						$labels = wp_list_pluck( $context_items[ $connector ]['children'], 'label' );
+
+						// Sort child items by label
+						array_multisort( $labels, SORT_ASC, $context_items[ $connector ]['children'] );
 					}
 
 					$data['items'] = $context_items;
 
-					ksort( $data['items'] );
-
-					// Ouput a hidden input to handle the connector value
+					// Display hidden input to handle the connector value
 					$filters_string .= '<input type="hidden" name="connector" class="record-filter-connector" />';
 				}
-				$filters_string .= $this->filter_select( $name, $data['title'], $data['items'] );
+
+				$labels = wp_list_pluck( $data['items'], 'label' );
+
+				// Sort top-level items by label
+				array_multisort( $labels, SORT_ASC, $data['items'] );
+
+				$filters_string .= $this->filter_select( $column, $data['title'], $data['items'] );
 			}
 		}
 
@@ -632,7 +631,7 @@ class WP_Stream_List_Table extends WP_List_Table {
 				$option_args = array(
 					'value'    => $value,
 					'selected' => selected( $value, $selected, false ),
-					'disabled' => isset( $item['disabled'] ) ? $item['disabled'] : null,
+					'disabled' => ! empty( $item['count'] ) ? 'disabled="disabled"' : null,
 					'icon'     => isset( $item['icon'] ) ? $item['icon'] : null,
 					'group'    => isset( $item['children'] ) ? $key : null,
 					'tooltip'  => isset( $item['tooltip'] ) ? $item['tooltip'] : null,
@@ -646,7 +645,7 @@ class WP_Stream_List_Table extends WP_List_Table {
 						$option_args  = array(
 							'value'    => $child_value,
 							'selected' => selected( $child_value, $selected, false ),
-							'disabled' => isset( $child_item['disabled'] ) ? $child_item['disabled'] : null,
+							'disabled' => ! empty( $child_item['count'] ) ? 'disabled="disabled"' : null,
 							'icon'     => isset( $child_item['icon'] ) ? $child_item['icon'] : null,
 							'group'    => $key,
 							'tooltip'  => isset( $child_item['tooltip'] ) ? $child_item['tooltip'] : null,

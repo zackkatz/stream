@@ -112,7 +112,7 @@ class WP_Stream_Author {
 			$avatar = sprintf( '<img alt="%1$s" src="%2$s" class="avatar avatar-%3$s photo" height="%3$s" width="%3$s">', esc_attr( $this->get_display_name() ), esc_url( $url ), esc_attr( $size ) );
 		} else {
 			if ( $this->is_deleted() ) {
-				$email  = $this->meta['user_email'];
+				$email  = isset( $this->meta['user_email'] ) ? $this->meta['user_email'] : null;
 				$avatar = get_avatar( $email, $size );
 			} else {
 				$avatar = get_avatar( $this->id, $size );
