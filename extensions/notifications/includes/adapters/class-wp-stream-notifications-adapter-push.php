@@ -4,6 +4,8 @@ class WP_Stream_Notifications_Adapter_Push extends WP_Stream_Notifications_Adapt
 
 	const PUSHOVER_OPTION_NAME = 'ckpn_pushover_notifications_settings';
 
+	const PUSHOVER_API_URL = 'https://api.pushover.net/1/messages.json';
+
 	public static function register( $title = '' ) {
 		parent::register( __( 'Push', 'stream' ) );
 		add_filter( 'wp_stream_serialized_labels', array( __CLASS__, 'pushover_key_labels' ) );
@@ -46,7 +48,7 @@ class WP_Stream_Notifications_Adapter_Push extends WP_Stream_Notifications_Adapt
 						__( 'Please activate the %1$s plugin to enable push alerts.', 'stream' ),
 						sprintf(
 							'<a href="%1$s">%2$s</a>',
-							self_admin_url( 'plugins.php' ),
+							esc_url( self_admin_url( 'plugins.php' ) ),
 							__( 'Pushover Notifications', 'stream' )
 						)
 					),
@@ -72,7 +74,7 @@ class WP_Stream_Notifications_Adapter_Push extends WP_Stream_Notifications_Adapt
 							__( 'Only those users with a %s in their profile can be selected.', 'stream' ),
 							sprintf(
 								'<a href="%s" target="_blank">%s</a>',
-								self_admin_url( 'profile.php#wp-stream-highlight:ckpn_user_key' ),
+								esc_url( self_admin_url( 'profile.php#wp-stream-highlight:ckpn_user_key' ) ),
 								__( 'Pushover User Key', 'stream' )
 							)
 						),
@@ -98,7 +100,7 @@ class WP_Stream_Notifications_Adapter_Push extends WP_Stream_Notifications_Adapt
 						__( 'Please provide your Application key on %1$s.', 'stream' ),
 						sprintf(
 							'<a href="%1$s">%2$s</a>',
-							self_admin_url( 'options-general.php?page=pushover-notifications' ),
+							esc_url( self_admin_url( 'options-general.php?page=pushover-notifications' ) ),
 							__( 'Pushover Notifications settings page', 'stream' )
 						)
 					),
@@ -140,26 +142,21 @@ class WP_Stream_Notifications_Adapter_Push extends WP_Stream_Notifications_Adapt
 			'title'   => $subject,
 		);
 
-		$connection = curl_init();
-
 		if ( ! isset( $users_pushover_keys ) || ! $users_pushover_keys ) {
 			return false;
 		}
 
 		foreach ( $users_pushover_keys as $key ) {
 			$post_fields['user'] = $key;
-			curl_setopt_array(
-				$connection,
-				array(
-					CURLOPT_URL            => 'https://api.pushover.net/1/messages.json',
-					CURLOPT_POST           => true,
-					CURLOPT_RETURNTRANSFER => 1,
-					CURLOPT_POSTFIELDS     => http_build_query( $post_fields ),
-				)
+
+			$args = array(
+				'sslverify' => true,
+				'blocking'  => false,
+				'body'      => http_build_query( $post_fields ),
 			);
-			$response = curl_exec( $connection );
+
+			wp_remote_post( self::PUSHOVER_API_URL, $args );
 		}
-		curl_close( $connection );
 	}
 
 	/**
