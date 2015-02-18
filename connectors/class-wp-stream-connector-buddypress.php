@@ -165,7 +165,7 @@ class WP_Stream_Connector_BuddyPress extends WP_Stream_Connector {
 					array(
 						'page' => 'bp-components',
 					),
-					admin_url( 'admin.php' )
+					esc_url( admin_url( 'admin.php' ) )
 				);
 			} elseif ( 'bp-pages' === $option_key ) {
 				$page_id = wp_stream_get_meta( $record, 'page_id', true );
@@ -174,7 +174,7 @@ class WP_Stream_Connector_BuddyPress extends WP_Stream_Connector {
 					array(
 						'page' => 'bp-page-settings',
 					),
-					admin_url( 'admin.php' )
+					esc_url( admin_url( 'admin.php' ) )
 				);
 
 				if ( $page_id ) {
@@ -187,7 +187,7 @@ class WP_Stream_Connector_BuddyPress extends WP_Stream_Connector {
 				array(
 					'page' => wp_stream_get_meta( $record, 'page', true ),
 				),
-				admin_url( 'admin.php' )
+				esc_url( admin_url( 'admin.php' ) )
 			);
 		} elseif ( in_array( $record->context, array( 'groups' ) ) ) {
 			$group_id = wp_stream_get_meta( $record, 'id', true );
@@ -236,7 +236,7 @@ class WP_Stream_Connector_BuddyPress extends WP_Stream_Connector {
 						'mode' => 'edit_group',
 						'group_id' => $group_id,
 					),
-					admin_url( 'users.php' )
+					esc_url( admin_url( 'users.php' ) )
 				);
 				$links[ __( 'Delete', 'stream' ) ] = add_query_arg(
 					array(
@@ -244,7 +244,7 @@ class WP_Stream_Connector_BuddyPress extends WP_Stream_Connector {
 						'mode' => 'delete_group',
 						'group_id' => $group_id,
 					),
-					admin_url( 'users.php' )
+					esc_url( admin_url( 'users.php' ) )
 				);
 			} else {
 				$field = new BP_XProfile_Field( $field_id );
@@ -258,7 +258,7 @@ class WP_Stream_Connector_BuddyPress extends WP_Stream_Connector {
 						'group_id' => $group_id,
 						'field_id' => $field_id,
 					),
-					admin_url( 'users.php' )
+					esc_url( admin_url( 'users.php' ) )
 				);
 				$links[ __( 'Delete', 'stream' ) ] = add_query_arg(
 					array(
@@ -266,7 +266,7 @@ class WP_Stream_Connector_BuddyPress extends WP_Stream_Connector {
 						'mode' => 'delete_field',
 						'field_id' => $field_id,
 					),
-					admin_url( 'users.php' )
+					esc_url( admin_url( 'users.php' ) )
 				);
 			}
 		}

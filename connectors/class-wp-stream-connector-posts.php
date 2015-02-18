@@ -82,7 +82,7 @@ class WP_Stream_Connector_Posts extends WP_Stream_Connector {
 							'action' => 'untrash',
 							'post'   => $post->ID,
 						),
-						admin_url( 'post.php' )
+						esc_url( admin_url( 'post.php' ) )
 					),
 					sprintf( 'untrash-post_%d', $post->ID )
 				);
@@ -93,7 +93,7 @@ class WP_Stream_Connector_Posts extends WP_Stream_Connector {
 							'action' => 'delete',
 							'post'   => $post->ID,
 						),
-						admin_url( 'post.php' )
+						esc_url( admin_url( 'post.php' ) )
 					),
 					sprintf( 'delete-post_%d', $post->ID )
 				);

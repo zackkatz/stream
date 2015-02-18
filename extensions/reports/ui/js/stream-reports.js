@@ -763,9 +763,9 @@
 			stream.report.chart.loadSection( $( this ).parents( '.postbox' ) );
 		});
 
-		$( '.postbox.closed' ).bind( 'click.initOpen', function() {
+		$( '.postbox.closed' ).on( 'click', '.initOpen', function() {
 			stream.report.chart.loadSection( $( this ) );
-			$( this ).unbind( 'click.initOpen' );
+			$( this ).off( 'click', '.initOpen' );
 		});
 
 		stream.report.metabox.init(
