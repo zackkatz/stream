@@ -150,7 +150,7 @@ class WP_Stream_Connector_EDD extends WP_Stream_Connector {
 			$links = WP_Stream_Connector_Posts::action_links( $links, $record );
 		} elseif ( in_array( $record->context, array( 'discounts' ) ) ) {
 			$post_type_label = get_post_type_labels( get_post_type_object( 'edd_discount' ) )->singular_name;
-			$base            = admin_url( 'edit.php?post_type=download&page=edd-discounts' );
+			$base            = esc_url( admin_url( 'edit.php?post_type=download&page=edd-discounts' ) );
 
 			$links[ sprintf( __( 'Edit %s', 'stream' ), $post_type_label ) ] = add_query_arg(
 				array(

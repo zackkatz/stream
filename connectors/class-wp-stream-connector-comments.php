@@ -130,22 +130,26 @@ class WP_Stream_Connector_Comments extends WP_Stream_Connector {
 				$del_nonce     = wp_create_nonce( "delete-comment_$comment->comment_ID" );
 				$approve_nonce = wp_create_nonce( "approve-comment_$comment->comment_ID" );
 
-				$links[ __( 'Edit', 'stream' ) ] = admin_url( "comment.php?action=editcomment&c=$comment->comment_ID" );
+				$links[ __( 'Edit', 'stream' ) ] = esc_url( self_admin_url( "comment.php?action=editcomment&c=$comment->comment_ID" ) );
 
 				if ( 1 === $comment->comment_approved ) {
-					$links[ __( 'Unapprove', 'stream' ) ] = admin_url(
-						sprintf(
-							'comment.php?action=unapprovecomment&c=%s&_wpnonce=%s',
-							$record->object_id,
-							$approve_nonce
+					$links[ __( 'Unapprove', 'stream' ) ] = esc_url(
+						self_admin_url(
+							sprintf(
+								'comment.php?action=unapprovecomment&c=%s&_wpnonce=%s',
+								$record->object_id,
+								$approve_nonce
+							)
 						)
 					);
 				} elseif ( empty( $comment->comment_approved ) ) {
-					$links[ __( 'Approve', 'stream' ) ] = admin_url(
-						sprintf(
-							'comment.php?action=approvecomment&c=%s&_wpnonce=%s',
-							$record->object_id,
-							$approve_nonce
+					$links[ __( 'Approve', 'stream' ) ] = esc_url(
+						self_admin_url(
+							sprintf(
+								'comment.php?action=approvecomment&c=%s&_wpnonce=%s',
+								$record->object_id,
+								$approve_nonce
+							)
 						)
 					);
 				}

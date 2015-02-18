@@ -99,7 +99,7 @@ class WP_Stream_Connector_Widgets extends WP_Stream_Connector {
 			global $wp_registered_sidebars;
 
 			if ( array_key_exists( $sidebar, $wp_registered_sidebars ) ) {
-				$links[ __( 'Edit Widget Area', 'stream' ) ] = admin_url( 'widgets.php#' . $sidebar ); // xss ok (@todo fix WPCS rule)
+				$links[ __( 'Edit Widget Area', 'stream' ) ] = esc_url( self_admin_url( 'widgets.php#' . urlencode( $sidebar ) ) );
 			}
 			// @todo Also old_sidebar_id and new_sidebar_id
 			// @todo Add Edit Widget link

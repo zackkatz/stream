@@ -142,14 +142,14 @@ class WP_Stream_Connector_Editor extends WP_Stream_Connector {
 							'theme' => urlencode( $theme_slug ),
 							'file'  => urlencode( $file_name ),
 						),
-						self_admin_url( 'theme-editor.php' )
+						esc_url( self_admin_url( 'theme-editor.php' ) )
 					);
 
 					$links[ __( 'Theme Details', 'stream' ) ] = add_query_arg(
 						array(
 							'theme' => urlencode( $theme_slug ),
 						),
-						self_admin_url( 'themes.php' )
+						esc_url( self_admin_url( 'themes.php' ) )
 					);
 				}
 
@@ -159,7 +159,7 @@ class WP_Stream_Connector_Editor extends WP_Stream_Connector {
 							'plugin' => urlencode( $plugin_slug ),
 							'file'   => urlencode( str_ireplace( trailingslashit( WP_PLUGIN_DIR ), '', $file_path ) ),
 						),
-						self_admin_url( 'plugin-editor.php' )
+						esc_url( self_admin_url( 'plugin-editor.php' ) )
 					);
 				}
 			}

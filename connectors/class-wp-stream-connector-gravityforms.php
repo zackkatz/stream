@@ -139,7 +139,7 @@ class WP_Stream_Connector_GravityForms extends WP_Stream_Connector {
 					'page' => 'gf_edit_forms',
 					'id' => $record->object_id,
 				),
-				esc_url( admin_url( 'admin.php' ) )
+				esc_url( self_admin_url( 'admin.php' ) )
 			);
 		} elseif ( 'entries' === $record->context ) {
 			$links[ __( 'View', 'stream' ) ] = add_query_arg(
@@ -149,7 +149,7 @@ class WP_Stream_Connector_GravityForms extends WP_Stream_Connector {
 					'lid' => $record->object_id,
 					'id' => wp_stream_get_meta( $record, 'form_id', true ),
 				),
-				esc_url( admin_url( 'admin.php' ) )
+				esc_url( self_admin_url( 'admin.php' ) )
 			);
 		} elseif ( 'notes' === $record->context ) {
 			$links[ __( 'View', 'stream' ) ] = add_query_arg(
@@ -159,14 +159,14 @@ class WP_Stream_Connector_GravityForms extends WP_Stream_Connector {
 					'lid' => wp_stream_get_meta( $record, 'lead_id', true ),
 					'id' => wp_stream_get_meta( $record, 'form_id', true ),
 				),
-				esc_url( admin_url( 'admin.php' ) )
+				esc_url( self_admin_url( 'admin.php' ) )
 			);
 		} elseif ( 'settings' === $record->context ) {
 			$links[ __( 'Edit Settings', 'stream' ) ] = add_query_arg(
 				array(
 					'page' => 'gf_settings',
 				),
-				esc_url( admin_url( 'admin.php' ) )
+				esc_url( self_admin_url( 'admin.php' ) )
 			);
 		}
 

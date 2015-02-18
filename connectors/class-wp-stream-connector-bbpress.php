@@ -132,7 +132,7 @@ class WP_Stream_Connector_bbPress extends WP_Stream_Connector {
 				array(
 					'page' => 'bbpress',
 				),
-				admin_url( 'options-general.php' )
+				esc_url( self_admin_url( 'options-general.php' ) )
 			) . esc_url_raw( '#' . $option ) );
 		}
 		return $links;

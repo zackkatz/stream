@@ -77,7 +77,7 @@ class WP_Stream_Connector_Installer extends WP_Stream_Connector {
 			global $wp_version;
 			$version = wp_stream_get_meta( $record, 'new_version', true );
 			if ( $version === $wp_version ) {
-				$links[ __( 'About', 'stream' ) ] = admin_url( 'about.php?updated' );
+				$links[ __( 'About', 'stream' ) ] = esc_url( self_admin_url( 'about.php?updated' ) );
 			}
 			$links[ __( 'View Release Notes', 'stream' ) ] = esc_url( sprintf( 'http://codex.wordpress.org/Version_%s', $version ) );
 		}

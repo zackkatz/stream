@@ -241,7 +241,7 @@ class WP_Stream_Reports {
 				),
 				self::$nonce
 			),
-			admin_url( 'admin-ajax.php' )
+			esc_url( self_admin_url( 'admin-ajax.php' ) )
 		);
 
 		$sections   = WP_Stream_Reports_Settings::get_user_options( 'sections' );
@@ -253,7 +253,7 @@ class WP_Stream_Reports {
 				),
 				self::$nonce
 			),
-			admin_url( 'admin-ajax.php' )
+			esc_url( self_admin_url( 'admin-ajax.php' ) )
 		);
 
 		$no_reports_message = __( "There's nothing here! Do you want to <a href=\"%s\">create some reports</a>?", 'stream' );

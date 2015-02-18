@@ -415,7 +415,7 @@ class WP_Stream_Connector_Settings extends WP_Stream_Connector {
 							'page' => $rule['submenu_slug'],
 							'tab'  => $url_tab,
 						),
-						admin_url( 'admin.php' )
+						esc_url( self_admin_url( 'admin.php' ) )
 					);
 				},
 				'applicable'   => function( $submenu, $record ) {
@@ -428,7 +428,7 @@ class WP_Stream_Connector_Settings extends WP_Stream_Connector {
 					return str_replace( '_', '-', $record->context );
 				},
 				'url'          => function( $rule, $record ) {
-					return add_query_arg( 'page', $rule['submenu_slug']( $record ), admin_url( $rule['menu_slug'] ) );
+					return add_query_arg( 'page', $rule['submenu_slug']( $record ), esc_url( self_admin_url( $rule['menu_slug'] ) ) );
 				},
 				'applicable'   => function( $submenu, $record ) {
 					return in_array( $record->context, array( 'custom_header', 'custom_background' ) );
@@ -440,7 +440,7 @@ class WP_Stream_Connector_Settings extends WP_Stream_Connector {
 					return sprintf( 'options-%s.php', $record->context );
 				},
 				'url'          => function( $rule, $record ) {
-					return admin_url( $rule['submenu_slug']( $record ) );
+					return esc_url( self_admin_url( $rule['submenu_slug']( $record ) ) );
 				},
 				'applicable'   => function( $submenu, $record ) {
 					return ! empty( $submenu['options-general.php'] );
@@ -452,7 +452,7 @@ class WP_Stream_Connector_Settings extends WP_Stream_Connector {
 					return 'settings.php';
 				},
 				'url'          => function( $rule, $record ) {
-					return network_admin_url( $rule['menu_slug'] );
+					return esc_url( network_admin_url( $rule['menu_slug'] ) );
 				},
 				'applicable'   => function( $submenu, $record ) {
 					if ( ! $record->blog_id ) {

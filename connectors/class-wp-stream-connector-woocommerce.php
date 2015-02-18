@@ -231,7 +231,7 @@ class WP_Stream_Connector_Woocommerce extends WP_Stream_Connector {
 			$text = sprintf( __( 'Edit WooCommerce %s', 'stream' ), $context_labels[ $record->context ] );;
 			$url  = add_query_arg(
 				array( 'page' => $option_page, 'tab' => $option_tab, 'section' => $option_section ),
-				admin_url( 'admin.php' ) // Not self_admin_url here, as WooCommerce doesn't exist in Network Admin
+				esc_url( admin_url( 'admin.php' ) ) // Not self_admin_url here, as WooCommerce doesn't exist in Network Admin
 			);
 
 			$links[ $text ] = $url . '#wp-stream-highlight:' . $option_key;
