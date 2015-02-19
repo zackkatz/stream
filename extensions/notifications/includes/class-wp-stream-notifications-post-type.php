@@ -142,7 +142,7 @@ class WP_Stream_Notifications_Post_Type {
 				'id'              => absint( $post->ID ),
 				'wp_stream_nonce' => wp_create_nonce( 'reset-occ_' . absint( $post->ID ) ),
 			),
-			esc_url( self_admin_url( 'admin-ajax.php' ) )
+			esc_url( admin_url( 'admin-ajax.php' ) )
 		);
 
 		$occ = absint( get_post_meta( $post->ID, 'occurrences', true ) );

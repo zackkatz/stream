@@ -168,7 +168,7 @@ class WP_Stream_Notifications_List_Table {
 					'action'    => $published ? 'unpublish' : 'publish',
 					'id'        => $post->ID,
 				),
-				esc_url( self_admin_url( 'edit.php' ) )
+				esc_url( admin_url( 'edit.php' ) )
 			)
 		);
 		$new['publish'] = sprintf(
