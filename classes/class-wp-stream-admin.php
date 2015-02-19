@@ -433,7 +433,7 @@ class WP_Stream_Admin {
 					),
 					'threshold' => absint( $bulk_actions_threshold ),
 				),
-				'plugins_screen_url' => self_admin_url( 'plugins.php#stream' ),
+				'plugins_screen_url' => esc_url( self_admin_url( 'plugins.php#stream' ) ),
 			)
 		);
 	}
